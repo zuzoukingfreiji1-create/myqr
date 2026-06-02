@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>For You — A Romantic Video</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg1: #34131f; /* deep burgundy */
+      --bg2: #4a1b2f; /* warm plum */
+      --accent: #ff8299; /* soft rose */
+      --glass: rgba(255,255,255,0.06);
+      --frame: rgba(255,255,255,0.03);
+    }
+
+    html,body{height:100%;}
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: radial-gradient(800px 400px at 20% 10%, rgba(255,130,153,0.05), transparent), linear-gradient(180deg,var(--bg1),var(--bg2));
+      color: #fff;
+      min-height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* softer vignette */
+    .vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(60% 60% at 50% 40%, rgba(0,0,0,0.08), rgba(0,0,0,0.28));mix-blend-mode:multiply}
+
+    /* central stage for the video */
+    .stage{
+      width: min(1100px, 95vw);
+      max-height: 86vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:18px;
+      position:relative;
+      z-index:2;
+      padding: 18px 0;
+    }
+
+    .container {
+      width:100%;
+      text-align:center;
+      pointer-events: none; /* allow clicks to pass through to video except on controls */
+    }
+
+    h1{
+      margin: 0 0 10px 0;
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: #ffeef2;
+      font-size: 2.2rem;
+      text-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    }
+
+    p.lead{margin:6px 0 20px;color: #ffdfe6;opacity:0.95}
+
+    /* make the video fill the viewport while preserving aspect ratio */
+    /* make video occupy roughly half the visible page */
+    .video-wrap{
+      position: relative;
+      width: min(900px, 56vw);
+      max-width: 760px;
+      max-height: 50vh; /* key: limits height to ~half the viewport */
+      border-radius: 18px;
+      padding: 12px; /* frame padding */
+      background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+      box-shadow: 0 18px 50px rgba(10,8,12,0.6), 0 6px 18px rgba(255,130,153,0.04) inset;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events: auto;
+    }
+
+    /* decorative inner frame */
+    .frame{
+      width:100%;
+      height:100%;
+      border-radius:12px;
+      overflow:hidden;
+      background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.02));
+      box-shadow: inset 0 0 80px rgba(0,0,0,0.4);
+      position:relative;
+    }
+
+    video{
+      width:100%;
+      height:auto; /* let height scale with width, constrained by .video-wrap max-height */
+      max-height: 50vh;
+      object-fit: contain; /* preserve aspect ratio and avoid black bars inside frame */
+      display:block;
+      filter: contrast(1.02) saturate(1.06) brightness(1);
+      background: linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.04));
+    }
+
+    /* subtle film border line */
+    .film-line{position:absolute;inset:8px;border-radius:10px;pointer-events:none;border:1px solid rgba(255,255,255,0.02)}
+
+    .controls-row{display:flex;gap:12px;justify-content:center;align-items:center;margin-top:14px}
+
+    .btn{background:var(--accent);border:none;color:white;padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:600}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.08)}
+
+    /* Floating hearts (emoji) */
+    .heart{position:fixed;pointer-events:none;font-size:18px;opacity:0;transform:translateY(0);z-index:1}
+
+    @keyframes floatUp{
+      0%{transform: translateY(0) scale(0.9);opacity:0}
+      10%{opacity:1}
+      100%{transform: translateY(-300px) scale(1.6);opacity:0}
+    }
+
+    /* small decorative footer */
+    .note{margin-top:12px;color:#ffdfe6;opacity:0.9;font-size:0.95rem}
+  </style>
+</head>
+<body>
+
+  <div class="vignette"></div>
+
+  <div class="stage">
+    <div class="container">
+      <h1>Just for you</h1>
+      <p class="lead">A little moment with a warm, romantic touch.</p>
+    </div>
+
+    <div class="video-wrap">
+      <div class="frame">
+        <video id="mainVideo" controls playsinline>
+          <source src="video.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+        <div class="film-line"></div>
+      </div>
+    </div>
+
+    <div class="container" style="pointer-events:auto;">
+      <div class="controls-row">
+        <button id="toggleHearts" class="btn">Toggle Hearts</button>
+        <button id="soundBtn" class="btn ghost">Play Soundtrack</button>
+        <a class="btn ghost" href="#" onclick="document.getElementById('mainVideo').requestFullscreen();return false;">Fullscreen</a>
+      </div>
+
+      <div class="note">Tip: add a soft soundtrack named <strong>romance.mp3</strong> next to this file for the best effect.</div>
+    </div>
+  </div>
+
+  <script>
+    // Floating hearts generator — creates emoji hearts that float up
+    let heartsOn = true;
+    const maxHearts = 16;
+    const heartInterval = 550; // ms
+    function makeHeart(){
+      if(!heartsOn) return;
+      const heart = document.createElement('div');
+      heart.className = 'heart';
+      const emojis = ['❤️','💖','💘','💕','💞'];
+      heart.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      const size = 12 + Math.random()*26;
+      heart.style.fontSize = size + 'px';
+      heart.style.left = (10 + Math.random()*80) + '%';
+      heart.style.bottom = '-10px';
+      heart.style.opacity = '0';
+      const dur = 3800 + Math.random()*2400;
+      heart.style.animation = `floatUp ${dur}ms ease-in forwards`;
+      document.body.appendChild(heart);
+      setTimeout(()=> heart.remove(), dur + 200);
+    }
+
+    let heartTimer = setInterval(()=>{
+      // limit number of hearts in DOM
+      const existing = document.querySelectorAll('.heart').length;
+      if(existing < maxHearts) makeHeart();
+    }, heartInterval);
+
+    document.getElementById('toggleHearts').addEventListener('click', ()=>{
+      heartsOn = !heartsOn;
+      document.getElementById('toggleHearts').textContent = heartsOn ? 'Toggle Hearts' : 'Hearts Off';
+    });
+
+    // Soundtrack handling: attempt to play a local romance.mp3 when user clicks
+    const soundBtn = document.getElementById('soundBtn');
+    const audio = new Audio('romance.mp3');
+    audio.loop = true;
+    let playing = false;
+    soundBtn.addEventListener('click', async ()=>{
+      try{
+        if(!playing){
+          await audio.play();
+          playing = true;
+          soundBtn.textContent = 'Pause Soundtrack';
+        } else {
+          audio.pause();
+          playing = false;
+          soundBtn.textContent = 'Play Soundtrack';
+        }
+      }catch(e){
+        alert('Playback blocked or file not found. Add romance.mp3 or interact with the page and try again.');
+      }
+    });
+  </script>
+
+</body>
+</html>
